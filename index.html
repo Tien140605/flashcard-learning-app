@@ -7,26 +7,48 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>Flashcard Learning App</h1>
-    <p class="subtitle">Create, study, and manage your flashcards in one place.</p>
+  <div class="bg-shape bg-shape-1"></div>
+  <div class="bg-shape bg-shape-2"></div>
 
-    <div class="top-bar">
-      <div class="form-box">
-        <input id="question" placeholder="Enter question" />
-        <input id="answer" placeholder="Enter answer" />
-        <button class="add-btn" onclick="addCard()">Add Card</button>
+  <main class="app-shell">
+    <section class="hero">
+      <p class="hero-tag">Study Smarter</p>
+      <h1>Flashcard Learning App</h1>
+      <p class="hero-subtitle">
+        Create, study, edit, and manage flashcards in one polished single-page experience.
+      </p>
+    </section>
+
+    <section class="panel form-panel">
+      <div class="panel-header">
+        <h2>Create a Flashcard</h2>
+        <p>Add a question and answer to build your study deck.</p>
       </div>
 
-      <div class="toolbar">
-        <button class="reset-btn" onclick="fetchCards()">Reset Session</button>
+      <div class="form-grid">
+        <div class="input-group">
+          <label for="question">Question</label>
+          <input id="question" type="text" placeholder="What is JavaScript?" />
+        </div>
+
+        <div class="input-group">
+          <label for="answer">Answer</label>
+          <input id="answer" type="text" placeholder="A programming language" />
+        </div>
+
+        <button class="primary-btn" onclick="addCard()">Add Card</button>
       </div>
-    </div>
+    </section>
 
-    <div id="stats" class="stats"></div>
+    <section class="toolbar-row">
+      <div id="stats" class="stats-card"></div>
+      <button class="secondary-btn" onclick="fetchCards()">Reset Session</button>
+    </section>
 
-    <div id="card-container"></div>
-  </div>
+    <section id="message" class="message-box hidden"></section>
+
+    <section id="card-container" class="card-grid"></section>
+  </main>
 
   <script src="script.js"></script>
 </body>

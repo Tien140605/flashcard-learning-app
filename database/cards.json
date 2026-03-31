@@ -1,0 +1,14 @@
+[
+  {
+    "question": "What is JavaScript?",
+    "answer": "A programming language"
+  },
+  {
+    "question": "What is MongoDB?",
+    "answer": "A NoSQL database"
+  },
+  {
+    "question": "What is Express? Enter answer",
+    "answer": "A Node.js framework"
+  }
+]

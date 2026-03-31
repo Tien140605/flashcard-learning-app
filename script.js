@@ -3,19 +3,34 @@ const API = "http://localhost:5000/cards";
 let cards = [];
 let showAnswer = null;
 
-// READ
+function showMessage(message, type = "success") {
+  const box = document.getElementById("message");
+  box.textContent = message;
+  box.className = `message-box ${type}`;
+  box.classList.remove("hidden");
+
+  setTimeout(() => {
+    box.classList.add("hidden");
+  }, 2200);
+}
+
 async function fetchCards() {
   try {
     const res = await fetch(API);
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch flashcards.");
+    }
+
     cards = await res.json();
     showAnswer = null;
     render();
   } catch (error) {
     console.error("Error fetching cards:", error);
+    showMessage("Could not load flashcards from the server.", "error");
   }
 }
 
-// CREATE
 async function addCard() {
   const questionInput = document.getElementById("question");
   const answerInput = document.getElementById("answer");
@@ -24,12 +39,12 @@ async function addCard() {
   const answer = answerInput.value.trim();
 
   if (!question || !answer) {
-    alert("Please enter both question and answer.");
+    showMessage("Please enter both question and answer.", "error");
     return;
   }
 
   try {
-    await fetch(API, {
+    const res = await fetch(API, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -37,32 +52,43 @@ async function addCard() {
       body: JSON.stringify({ question, answer }),
     });
 
+    if (!res.ok) {
+      throw new Error("Failed to add card.");
+    }
+
     questionInput.value = "";
     answerInput.value = "";
 
-    fetchCards();
+    await fetchCards();
+    showMessage("Flashcard added successfully.");
   } catch (error) {
     console.error("Error adding card:", error);
+    showMessage("Failed to add flashcard.", "error");
   }
 }
 
-// DELETE
 async function deleteCard(id) {
   try {
-    await fetch(`${API}/${id}`, {
+    const res = await fetch(`${API}/${id}`, {
       method: "DELETE",
     });
 
+    if (!res.ok) {
+      throw new Error("Failed to delete card.");
+    }
+
     cards = cards.filter((card) => card._id !== id);
     render();
+    showMessage("Flashcard deleted.");
   } catch (error) {
     console.error("Error deleting card:", error);
+    showMessage("Failed to delete flashcard.", "error");
   }
 }
 
-// UPDATE
 async function updateCard(id) {
   const card = cards.find((c) => c._id === id);
+
   const newQ = prompt("Edit question:", card?.question || "");
   if (newQ === null) return;
 
@@ -70,22 +96,31 @@ async function updateCard(id) {
   if (newA === null) return;
 
   if (!newQ.trim() || !newA.trim()) {
-    alert("Question and answer cannot be empty.");
+    showMessage("Question and answer cannot be empty.", "error");
     return;
   }
 
   try {
-    await fetch(`${API}/${id}`, {
+    const res = await fetch(`${API}/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ question: newQ.trim(), answer: newA.trim() }),
+      body: JSON.stringify({
+        question: newQ.trim(),
+        answer: newA.trim(),
+      }),
     });
 
-    fetchCards();
+    if (!res.ok) {
+      throw new Error("Failed to update card.");
+    }
+
+    await fetchCards();
+    showMessage("Flashcard updated.");
   } catch (error) {
     console.error("Error updating card:", error);
+    showMessage("Failed to update flashcard.", "error");
   }
 }
 
@@ -94,7 +129,6 @@ function updateStats() {
   stats.textContent = `Cards remaining in this session: ${cards.length}`;
 }
 
-// RENDER
 function render() {
   const container = document.getElementById("card-container");
   container.innerHTML = "";
@@ -166,5 +200,13 @@ function render() {
   });
 }
 
-// Initial load
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    const active = document.activeElement;
+    if (active?.id === "question" || active?.id === "answer") {
+      addCard();
+    }
+  }
+});
+
 fetchCards();
