@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flashcard Learning App</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Flashcard Learning App</h1>
+    <p class="subtitle">Create, study, and manage your flashcards in one place.</p>
+
+    <div class="top-bar">
+      <div class="form-box">
+        <input id="question" placeholder="Enter question" />
+        <input id="answer" placeholder="Enter answer" />
+        <button class="add-btn" onclick="addCard()">Add Card</button>
+      </div>
+
+      <div class="toolbar">
+        <button class="reset-btn" onclick="fetchCards()">Reset Session</button>
+      </div>
+    </div>
+
+    <div id="stats" class="stats"></div>
+
+    <div id="card-container"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
