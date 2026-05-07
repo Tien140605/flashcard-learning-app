@@ -1,40 +1,52 @@
 # Flashcard Learning App
 
-## Project Title
-Flashcard Learning App
+## Project Description
+This is a single-page flashcard learning application built with React, Node.js, Express, and MongoDB. Users can register, log in, create their own flashcards, edit them, delete them, search cards, reveal answers, and track their learning history. Admin users can view all registered users and inspect the learning history of each user.
 
-## Problem Summary
-This website solves the problem of managing and studying flashcards in a simple and interactive way. Users can create their own question-and-answer flashcards, review them in a study session, and manage them through a streamlined single-page interface. The app avoids unnecessary page reloads and supports smooth interaction for learning.
+## Main Features
+- User registration and login
+- User-specific flashcard sets
+- Create, read, update, and delete flashcards
+- Search flashcards
+- Click-to-reveal answer interaction
+- Learning history tracking
+- Admin view for checking each user's learning history
+- Single-page React interface
 
-## Technical Stack
-- **Frontend:** HTML, CSS, JavaScript
-- **Styling:** Custom CSS
-- **Backend:** Node.js, Express.js
-- **Database:** MongoDB Atlas
-- **Routing/API:** REST API endpoints
-- **Deployment:** Not deployed yet (local development)
+## Technologies Used
+- React
+- Vite
+- Node.js
+- Express.js
+- MongoDB
+- Mongoose
+- Axios
+- JWT authentication
+- CSS
 
-## Feature List
-- Single-page dynamic interface
-- Create new flashcards
-- View all flashcards
-- Edit existing flashcards
-- Delete flashcards
-- Click a flashcard to reveal the answer
-- Flashcards disappear after use in the current session
-- Reset session to reload all flashcards
-- Responsive card layout
+## CRUD Operations
+| Operation | Feature |
+|---|---|
+| Create | Add new flashcards |
+| Read | Display flashcards from MongoDB |
+| Update | Edit existing flashcards |
+| Delete | Delete flashcards |
 
-## Folder Structure
-```text
+## Single Page Application
+The application behaves as a single-page application. It uses one main HTML file and dynamically updates the page using React state without loading separate HTML pages from the server.
+
+## User Accounts
+Each user has their own flashcard set. Flashcards are connected to the logged-in user's account, so different users do not share the same cards.
+
+## Admin Feature
+Admin users can open the View All History panel, see all registered users, select a user, and view that user's learning history.
+
+## Project Structure
+```txt
 flashcard-app/
-├── index.html
-├── style.css
-├── script.js
-├── server.js
-├── package.json
-├── package-lock.json
-├── .gitignore
-├── README.md
+├── client/
+├── server/
 ├── database/
-│   └── cards.json
+├── README.md
+├── package.json
+└── package-lock.json
