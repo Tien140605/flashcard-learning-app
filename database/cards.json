@@ -1,14 +1,102 @@
-[
-  {
-    "question": "What is JavaScript?",
-    "answer": "A programming language"
+[{
+  "_id": {
+    "$oid": "69fcb48bfcb70b37b872ed90"
   },
-  {
-    "question": "What is MongoDB?",
-    "answer": "A NoSQL database"
+  "userId": {
+    "$oid": "69fcabd8cd1139b6a23c8617"
   },
-  {
-    "question": "What is Express? Enter answer",
-    "answer": "A Node.js framework"
-  }
-]
+  "question": "1+1",
+  "answer": "2",
+  "createdAt": {
+    "$date": "2026-05-07T15:49:31.830Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-07T15:49:31.830Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69fcb492fcb70b37b872ed93"
+  },
+  "userId": {
+    "$oid": "69fcabd8cd1139b6a23c8617"
+  },
+  "question": "2+3",
+  "answer": "5",
+  "createdAt": {
+    "$date": "2026-05-07T15:49:38.501Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-07T15:49:38.501Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69fcb4d5fcb70b37b872edbb"
+  },
+  "userId": {
+    "$oid": "69fca7d9766e6ae19517da7c"
+  },
+  "question": "What is Javascript ?",
+  "answer": "a programming language",
+  "createdAt": {
+    "$date": "2026-05-07T15:50:45.087Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-07T15:50:45.087Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69fcb4e4fcb70b37b872edbe"
+  },
+  "userId": {
+    "$oid": "69fca7d9766e6ae19517da7c"
+  },
+  "question": "What is MongoDB?",
+  "answer": "A NoSQL database",
+  "createdAt": {
+    "$date": "2026-05-07T15:51:00.438Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-07T15:51:00.438Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69fcb4fbfcb70b37b872edc1"
+  },
+  "userId": {
+    "$oid": "69fca7d9766e6ae19517da7c"
+  },
+  "question": "what is your name ?",
+  "answer": "tien",
+  "createdAt": {
+    "$date": "2026-05-07T15:51:23.241Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-07T15:51:23.241Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69fcb571fcb70b37b872ee19"
+  },
+  "userId": {
+    "$oid": "69f22e54011a1d9d88b8dbe4"
+  },
+  "question": "1111",
+  "answer": "sdsds",
+  "createdAt": {
+    "$date": "2026-05-07T15:53:21.885Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-07T15:53:21.885Z"
+  },
+  "__v": 0
+}]
