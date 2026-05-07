@@ -1,0 +1,110 @@
+[{
+  "_id": {
+    "$oid": "69fcb562fcb70b37b872edfa"
+  },
+  "userId": {
+    "$oid": "69fca7d9766e6ae19517da7c"
+  },
+  "flashcardId": {
+    "$oid": "69fcb4e4fcb70b37b872edbe"
+  },
+  "question": "What is MongoDB?",
+  "viewedAt": {
+    "$date": "2026-05-07T15:53:06.903Z"
+  },
+  "createdAt": {
+    "$date": "2026-05-07T15:53:06.903Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-07T15:53:06.903Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69fcb563fcb70b37b872edfd"
+  },
+  "userId": {
+    "$oid": "69fca7d9766e6ae19517da7c"
+  },
+  "flashcardId": {
+    "$oid": "69fcb4e4fcb70b37b872edbe"
+  },
+  "question": "What is MongoDB?",
+  "viewedAt": {
+    "$date": "2026-05-07T15:53:07.229Z"
+  },
+  "createdAt": {
+    "$date": "2026-05-07T15:53:07.229Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-07T15:53:07.229Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69fcb573fcb70b37b872ee1c"
+  },
+  "userId": {
+    "$oid": "69f22e54011a1d9d88b8dbe4"
+  },
+  "flashcardId": {
+    "$oid": "69fcb571fcb70b37b872ee19"
+  },
+  "question": "1111",
+  "viewedAt": {
+    "$date": "2026-05-07T15:53:23.129Z"
+  },
+  "createdAt": {
+    "$date": "2026-05-07T15:53:23.129Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-07T15:53:23.129Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69fcb573fcb70b37b872ee1f"
+  },
+  "userId": {
+    "$oid": "69f22e54011a1d9d88b8dbe4"
+  },
+  "flashcardId": {
+    "$oid": "69fcb571fcb70b37b872ee19"
+  },
+  "question": "1111",
+  "viewedAt": {
+    "$date": "2026-05-07T15:53:23.433Z"
+  },
+  "createdAt": {
+    "$date": "2026-05-07T15:53:23.433Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-07T15:53:23.433Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69fcb5c3fcb70b37b872ee68"
+  },
+  "userId": {
+    "$oid": "69fca7d9766e6ae19517da7c"
+  },
+  "flashcardId": {
+    "$oid": "69fcb4d5fcb70b37b872edbb"
+  },
+  "question": "What is Javascript ?",
+  "viewedAt": {
+    "$date": "2026-05-07T15:54:43.095Z"
+  },
+  "createdAt": {
+    "$date": "2026-05-07T15:54:43.096Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-07T15:54:43.096Z"
+  },
+  "__v": 0
+}]
