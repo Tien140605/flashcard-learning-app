@@ -5,7 +5,11 @@ require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
 const historyRoutes = require("./routes/historyRoutes");
+const adminRoutes = require("./routes/adminRoutes");
+
+
 const ViewHistory = require("./models/ViewHistory");
+const Card = require("./models/Card");
 const { verifyToken } = require("./middleware/authMiddleware");
 
 const app = express();
@@ -15,36 +19,14 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/history", historyRoutes);
+app.use("/api/admin", adminRoutes);
 
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.log(err));
 
-const cardSchema = new mongoose.Schema(
-  {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
 
-    question: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    answer: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-  },
-  { timestamps: true }
-);
-
-const Card = mongoose.model("Card", cardSchema);
 
 app.get("/", (req, res) => {
   res.send("API is running...");

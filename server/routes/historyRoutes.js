@@ -1,12 +1,13 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const ViewHistory = require("../models/ViewHistory");
+const StudySession = require("../models/StudySession");
 const User = require("../models/User");
 const { verifyToken, requireAdmin } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-/* Save learning history when user reveals a flashcard */
+/* Old simple card-view history route. Kept for compatibility. */
 router.post("/", verifyToken, async (req, res) => {
   try {
     const { flashcardId, question } = req.body;
@@ -36,7 +37,128 @@ router.post("/", verifyToken, async (req, res) => {
   }
 });
 
-/* Normal user: view their own history */
+/* Save one completed learning session */
+router.post("/session", verifyToken, async (req, res) => {
+  try {
+    const { totalCards, correctCount, wrongCards } = req.body;
+
+    if (totalCards === undefined || correctCount === undefined) {
+      return res.status(400).json({
+        message: "totalCards and correctCount are required.",
+      });
+    }
+
+    const safeWrongCards = Array.isArray(wrongCards) ? wrongCards : [];
+    const wrongCount = safeWrongCards.length;
+
+    const newSession = new StudySession({
+      userId: req.user._id,
+      totalCards,
+      correctCount,
+      wrongCount,
+      wrongCards: safeWrongCards.map((card) => ({
+        flashcardId: card.flashcardId
+          ? new mongoose.Types.ObjectId(card.flashcardId)
+          : undefined,
+        question: card.question,
+        answer: card.answer,
+      })),
+      completedAt: new Date(),
+    });
+
+    await newSession.save();
+
+    res.status(201).json(newSession);
+  } catch (err) {
+    console.error("Error saving study session:", err);
+    res.status(500).json({
+      message: "Failed to save study session.",
+      error: err.message,
+    });
+  }
+});
+
+/* Normal user: get their study sessions */
+router.get("/my-sessions", verifyToken, async (req, res) => {
+  try {
+    const sessions = await StudySession.find({ userId: req.user._id })
+      .sort({ completedAt: -1 })
+      .select("totalCards correctCount wrongCount wrongCards completedAt createdAt");
+
+    res.json(sessions);
+  } catch (err) {
+    console.error("Error loading my study sessions:", err);
+    res.status(500).json({
+      message: "Failed to load study sessions.",
+    });
+  }
+});
+
+/* Normal user/admin: get one session detail */
+router.get("/session/:sessionId", verifyToken, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const session = await StudySession.findById(sessionId);
+
+    if (!session) {
+      return res.status(404).json({
+        message: "Study session not found.",
+      });
+    }
+
+    const isOwner = String(session.userId) === String(req.user._id);
+    const isAdmin = req.user.role === "admin";
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({
+        message: "You do not have permission to view this session.",
+      });
+    }
+
+    res.json(session);
+  } catch (err) {
+    console.error("Error loading session detail:", err);
+    res.status(500).json({
+      message: "Failed to load session detail.",
+    });
+  }
+});
+
+/* Admin: view selected user's study sessions */
+router.get("/user/:userId", verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const targetUser = await User.findById(userId).select("username role");
+
+    if (!targetUser) {
+      return res.status(404).json({
+        message: "User not found.",
+      });
+    }
+
+    const sessions = await StudySession.find({ userId })
+      .sort({ completedAt: -1 })
+      .select("totalCards correctCount wrongCount wrongCards completedAt createdAt");
+
+    res.json({
+      user: {
+        id: targetUser._id,
+        username: targetUser.username,
+        role: targetUser.role,
+      },
+      sessions,
+    });
+  } catch (err) {
+    console.error("Error loading selected user sessions:", err);
+    res.status(500).json({
+      message: "Failed to load selected user's study sessions.",
+    });
+  }
+});
+
+/* Old route: normal user card-view history. Kept for backup compatibility. */
 router.get("/my-history", verifyToken, async (req, res) => {
   try {
     const history = await ViewHistory.aggregate([
@@ -67,155 +189,6 @@ router.get("/my-history", verifyToken, async (req, res) => {
     console.error("Error loading my history:", err);
     res.status(500).json({
       message: "Failed to load history.",
-    });
-  }
-});
-
-/* Admin: get all users list */
-router.get("/users", verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const users = await User.find()
-      .select("username role createdAt")
-      .sort({ username: 1 });
-
-    const usersWithStats = await Promise.all(
-      users.map(async (user) => {
-        const totalViews = await ViewHistory.countDocuments({
-          userId: user._id,
-        });
-
-        const uniqueCards = await ViewHistory.distinct("flashcardId", {
-          userId: user._id,
-        });
-
-        return {
-          id: user._id,
-          username: user.username,
-          role: user.role,
-          totalViews,
-          uniqueCards: uniqueCards.length,
-        };
-      })
-    );
-
-    res.json(usersWithStats);
-  } catch (err) {
-    console.error("Error loading users:", err);
-    res.status(500).json({
-      message: "Failed to load users.",
-    });
-  }
-});
-
-/* Admin: view one selected user's history */
-router.get("/user/:userId", verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    const targetUser = await User.findById(userId).select("username role");
-
-    if (!targetUser) {
-      return res.status(404).json({
-        message: "User not found.",
-      });
-    }
-
-    const history = await ViewHistory.aggregate([
-      {
-        $match: {
-          userId: new mongoose.Types.ObjectId(userId),
-        },
-      },
-      {
-        $group: {
-          _id: "$flashcardId",
-          flashcardId: { $first: "$flashcardId" },
-          question: { $first: "$question" },
-          count: { $sum: 1 },
-          viewedAt: { $max: "$viewedAt" },
-        },
-      },
-      {
-        $sort: {
-          count: -1,
-          viewedAt: -1,
-        },
-      },
-    ]);
-
-    res.json({
-      user: {
-        id: targetUser._id,
-        username: targetUser.username,
-        role: targetUser.role,
-      },
-      history,
-    });
-  } catch (err) {
-    console.error("Error loading selected user history:", err);
-    res.status(500).json({
-      message: "Failed to load selected user history.",
-    });
-  }
-});
-
-/* Optional old route: admin views everything */
-router.get("/view_history", verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const history = await ViewHistory.aggregate([
-      {
-        $group: {
-          _id: {
-            userId: "$userId",
-            flashcardId: "$flashcardId",
-          },
-          userId: { $first: "$userId" },
-          flashcardId: { $first: "$flashcardId" },
-          question: { $first: "$question" },
-          count: { $sum: 1 },
-          viewedAt: { $max: "$viewedAt" },
-        },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "userId",
-          foreignField: "_id",
-          as: "user",
-        },
-      },
-      {
-        $unwind: {
-          path: "$user",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $project: {
-          _id: 1,
-          userId: 1,
-          flashcardId: 1,
-          question: 1,
-          count: 1,
-          viewedAt: 1,
-          username: "$user.username",
-          role: "$user.role",
-        },
-      },
-      {
-        $sort: {
-          username: 1,
-          count: -1,
-          viewedAt: -1,
-        },
-      },
-    ]);
-
-    res.json(history);
-  } catch (err) {
-    console.error("Error loading all users history:", err);
-    res.status(500).json({
-      message: "Failed to load all users history.",
     });
   }
 });

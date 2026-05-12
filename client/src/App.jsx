@@ -5,6 +5,7 @@ import "./App.css";
 const CARD_API = "http://localhost:5000/cards";
 const AUTH_API = "http://localhost:5000/api/auth";
 const HISTORY_API = "http://localhost:5000/api/history";
+const ADMIN_API = "http://localhost:5000/api/admin";
 
 function App() {
   const [cards, setCards] = useState([]);
@@ -16,14 +17,29 @@ function App() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
-  const [history, setHistory] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [historyMode, setHistoryMode] = useState("my");
+  const [selectedSession, setSelectedSession] = useState(null);
 
+  const [learningMode, setLearningMode] = useState(false);
+  const [learningCards, setLearningCards] = useState([]);
+  const [learningIndex, setLearningIndex] = useState(0);
+  const [learningFlipped, setLearningFlipped] = useState(false);
+  const [learningResults, setLearningResults] = useState([]);
+  const [learningCompleted, setLearningCompleted] = useState(false);
+  const [lastSavedSession, setLastSavedSession] = useState(null);
+
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminUsers, setAdminUsers] = useState([]);
-  const [selectedHistoryUser, setSelectedHistoryUser] = useState(null);
-
-  const [revealedCardId, setRevealedCardId] = useState(null);
+  const [selectedAdminUser, setSelectedAdminUser] = useState(null);
+  const [adminCards, setAdminCards] = useState([]);
+  const [adminUserHistory, setAdminUserHistory] = useState([]);
+  const [selectedAdminSession, setSelectedAdminSession] = useState(null);
+  const [adminQuestion, setAdminQuestion] = useState("");
+  const [adminAnswer, setAdminAnswer] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminOpenSection, setAdminOpenSection] = useState(null);
+  const [adminCardSearch, setAdminCardSearch] = useState("");
 
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("user");
@@ -111,12 +127,29 @@ function App() {
 
     setUser(null);
     setCards([]);
-    setHistory([]);
-    setAdminUsers([]);
-    setSelectedHistoryUser(null);
+    setSessions([]);
     setShowHistory(false);
-    setHistoryMode("my");
-    setRevealedCardId(null);
+    setSelectedSession(null);
+
+    setLearningMode(false);
+    setLearningCards([]);
+    setLearningIndex(0);
+    setLearningFlipped(false);
+    setLearningResults([]);
+    setLearningCompleted(false);
+    setLastSavedSession(null);
+
+    setShowAdminPanel(false);
+    setAdminUsers([]);
+    setSelectedAdminUser(null);
+    setAdminCards([]);
+    setAdminUserHistory([]);
+    setSelectedAdminSession(null);
+    setAdminQuestion("");
+    setAdminAnswer("");
+    setAdminPassword("");
+    setAdminOpenSection(null);
+    setAdminCardSearch("");
   };
 
   const addCard = async () => {
@@ -144,12 +177,7 @@ function App() {
   const deleteCard = async (id) => {
     try {
       await axios.delete(`${CARD_API}/${id}`, getAuthHeader());
-
       setCards(cards.filter((card) => card._id !== id));
-
-      if (revealedCardId === id) {
-        setRevealedCardId(null);
-      }
     } catch (err) {
       console.error("Error deleting card:", err);
       alert(err.response?.data?.message || "Failed to delete card.");
@@ -175,49 +203,125 @@ function App() {
       );
 
       setCards(cards.map((card) => (card._id === id ? res.data : card)));
-
-      setHistory(
-        history.map((item) =>
-          String(item.flashcardId) === id || String(item._id) === id
-            ? { ...item, question: res.data.question }
-            : item
-        )
-      );
     } catch (err) {
       console.error("Error updating card:", err);
       alert(err.response?.data?.message || "Failed to update card.");
     }
   };
 
-  const recordHistory = async (card) => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+  const shuffleCards = (cardList) => {
+    const shuffled = [...cardList];
 
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const randomIndex = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[randomIndex]] = [
+        shuffled[randomIndex],
+        shuffled[i],
+      ];
+    }
+
+    return shuffled;
+  };
+
+  const startLearning = () => {
+    if (cards.length === 0) {
+      alert("Please add at least one flashcard before starting learning mode.");
+      return;
+    }
+
+    const randomCards = shuffleCards(cards);
+
+    setLearningCards(randomCards);
+    setLearningMode(true);
+    setLearningIndex(0);
+    setLearningFlipped(false);
+    setLearningResults([]);
+    setLearningCompleted(false);
+    setLastSavedSession(null);
+  };
+
+  const markLearningCard = async (isCorrect) => {
+    const currentCard = learningCards[learningIndex];
+
+    const updatedResults = [
+      ...learningResults,
+      {
+        flashcardId: currentCard._id,
+        question: currentCard.question,
+        answer: currentCard.answer,
+        isCorrect,
+      },
+    ];
+
+    setLearningResults(updatedResults);
+
+    if (learningIndex < learningCards.length - 1) {
+      setLearningIndex(learningIndex + 1);
+      setLearningFlipped(false);
+      return;
+    }
+
+    await saveStudySession(updatedResults);
+  };
+
+  const saveStudySession = async (results) => {
     try {
-      await axios.post(
-        HISTORY_API,
+      const correctCount = results.filter((item) => item.isCorrect).length;
+      const wrongCards = results
+        .filter((item) => !item.isCorrect)
+        .map((item) => ({
+          flashcardId: item.flashcardId,
+          question: item.question,
+          answer: item.answer,
+        }));
+
+      const res = await axios.post(
+        `${HISTORY_API}/session`,
         {
-          flashcardId: card._id,
-          question: card.question,
+          totalCards: results.length,
+          correctCount,
+          wrongCards,
         },
         getAuthHeader()
       );
+
+      setLastSavedSession(res.data);
+      setLearningCompleted(true);
+      setLearningFlipped(false);
     } catch (err) {
-      console.error("Error recording history:", err);
+      console.error("Error saving study session:", err);
+      alert(err.response?.data?.message || "Failed to save study session.");
     }
   };
 
-  const handleCardClick = async (card) => {
-    if (revealedCardId === card._id) {
-      setRevealedCardId(null);
-      return;
-    }
-
-    setRevealedCardId(card._id);
-    await recordHistory(card);
+  const closeLearningMode = async () => {
+    setLearningMode(false);
+    setLearningCards([]);
+    setLearningIndex(0);
+    setLearningFlipped(false);
+    setLearningResults([]);
+    setLearningCompleted(false);
+    setLastSavedSession(null);
+    await fetchMyHistory(false);
   };
 
-  const fetchMyHistory = async () => {
+  const cancelLearningMode = () => {
+    const confirmClose = window.confirm(
+      "Are you sure you want to exit this learning session? Progress will not be saved."
+    );
+
+    if (!confirmClose) return;
+
+    setLearningMode(false);
+    setLearningCards([]);
+    setLearningIndex(0);
+    setLearningFlipped(false);
+    setLearningResults([]);
+    setLearningCompleted(false);
+    setLastSavedSession(null);
+  };
+
+  const fetchMyHistory = async (openDrawer = true) => {
     const token = localStorage.getItem("token");
 
     if (!token) {
@@ -226,20 +330,21 @@ function App() {
     }
 
     try {
-      const res = await axios.get(`${HISTORY_API}/my-history`, getAuthHeader());
+      const res = await axios.get(`${HISTORY_API}/my-sessions`, getAuthHeader());
 
-      setHistory(res.data);
-      setAdminUsers([]);
-      setSelectedHistoryUser(null);
-      setHistoryMode("my");
-      setShowHistory(true);
+      setSessions(res.data);
+      setSelectedSession(null);
+
+      if (openDrawer) {
+        setShowHistory(true);
+      }
     } catch (err) {
-      console.error("Error fetching my history:", err);
-      alert("Failed to load history.");
+      console.error("Error fetching my study sessions:", err);
+      alert("Failed to load study sessions.");
     }
   };
 
-  const fetchAllHistory = async () => {
+  const openAdminPanel = async () => {
     const token = localStorage.getItem("token");
 
     if (!token) {
@@ -248,50 +353,202 @@ function App() {
     }
 
     try {
-      const res = await axios.get(`${HISTORY_API}/users`, getAuthHeader());
+      const res = await axios.get(`${ADMIN_API}/users`, getAuthHeader());
 
       setAdminUsers(res.data);
-      setHistory([]);
-      setSelectedHistoryUser(null);
-      setHistoryMode("all");
-      setShowHistory(true);
+      setSelectedAdminUser(null);
+      setAdminCards([]);
+      setAdminUserHistory([]);
+      setSelectedAdminSession(null);
+      setAdminQuestion("");
+      setAdminAnswer("");
+      setAdminPassword("");
+      setAdminOpenSection(null);
+      setAdminCardSearch("");
+      setShowAdminPanel(true);
     } catch (err) {
-      console.error("Error fetching users:", err);
-      alert(err.response?.data?.message || "Admin only. Failed to load users.");
+      console.error("Error opening admin panel:", err);
+      alert(err.response?.data?.message || "Admin only. Failed to open panel.");
     }
   };
 
-  const fetchHistoryForUser = async (targetUser) => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      alert("Please login first.");
-      return;
-    }
-
+  const fetchAdminUserData = async (targetUser) => {
     try {
       const targetUserId = targetUser.id || targetUser._id;
 
-      const res = await axios.get(
-        `${HISTORY_API}/user/${targetUserId}`,
-        getAuthHeader()
-      );
+      const [cardsRes, historyRes] = await Promise.all([
+        axios.get(`${ADMIN_API}/users/${targetUserId}/cards`, getAuthHeader()),
+        axios.get(`${HISTORY_API}/user/${targetUserId}`, getAuthHeader()),
+      ]);
 
-      setSelectedHistoryUser(res.data.user);
-      setHistory(res.data.history);
-      setHistoryMode("all");
-      setShowHistory(true);
+      setSelectedAdminUser(targetUser);
+      setAdminCards(cardsRes.data);
+      setAdminUserHistory(historyRes.data.sessions || []);
+      setSelectedAdminSession(null);
+      setAdminQuestion("");
+      setAdminAnswer("");
+      setAdminPassword("");
+      setAdminOpenSection(null);
+      setAdminCardSearch("");
     } catch (err) {
-      console.error("Error fetching selected user history:", err);
-      alert(
-        err.response?.data?.message || "Failed to load selected user history."
-      );
+      console.error("Error fetching admin user data:", err);
+      alert(err.response?.data?.message || "Failed to load user data.");
     }
   };
 
-  const filteredCards = cards.filter((card) =>
-    card.question.toLowerCase().includes(search.toLowerCase())
-  );
+  const adminAddCardForUser = async () => {
+    if (!selectedAdminUser) {
+      alert("Please select a user first.");
+      return;
+    }
+
+    if (!adminQuestion || !adminAnswer) {
+      alert("Please enter question and answer.");
+      return;
+    }
+
+    try {
+      const targetUserId = selectedAdminUser.id || selectedAdminUser._id;
+
+      const res = await axios.post(
+        `${ADMIN_API}/users/${targetUserId}/cards`,
+        {
+          question: adminQuestion,
+          answer: adminAnswer,
+        },
+        getAuthHeader()
+      );
+
+      setAdminCards([res.data, ...adminCards]);
+      setAdminQuestion("");
+      setAdminAnswer("");
+      setAdminOpenSection("cards");
+      setAdminCardSearch("");
+
+      if (String(targetUserId) === String(user.id)) {
+        setCards([res.data, ...cards]);
+      }
+
+      alert("Card added for selected user.");
+    } catch (err) {
+      console.error("Admin add card error:", err);
+      alert(err.response?.data?.message || "Failed to add card for user.");
+    }
+  };
+
+  const adminEditCard = async (card) => {
+    const newQ = prompt("Edit question:", card.question || "");
+    const newA = prompt("Edit answer:", card.answer || "");
+
+    if (!newQ || !newA) return;
+
+    try {
+      const res = await axios.put(
+        `${ADMIN_API}/cards/${card._id}`,
+        {
+          question: newQ,
+          answer: newA,
+        },
+        getAuthHeader()
+      );
+
+      setAdminCards(
+        adminCards.map((item) => (item._id === card._id ? res.data : item))
+      );
+
+      setCards(cards.map((item) => (item._id === card._id ? res.data : item)));
+
+      alert("Card updated by admin.");
+    } catch (err) {
+      console.error("Admin edit card error:", err);
+      alert(err.response?.data?.message || "Failed to update card.");
+    }
+  };
+
+  const adminDeleteCard = async (cardId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this user's card?"
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await axios.delete(`${ADMIN_API}/cards/${cardId}`, getAuthHeader());
+
+      setAdminCards(adminCards.filter((card) => card._id !== cardId));
+      setCards(cards.filter((card) => card._id !== cardId));
+
+      alert("Card deleted by admin.");
+    } catch (err) {
+      console.error("Admin delete card error:", err);
+      alert(err.response?.data?.message || "Failed to delete card.");
+    }
+  };
+
+  const adminChangePassword = async () => {
+    if (!selectedAdminUser) {
+      alert("Please select a user first.");
+      return;
+    }
+
+    if (!adminPassword) {
+      alert("Please enter a new password.");
+      return;
+    }
+
+    try {
+      const targetUserId = selectedAdminUser.id || selectedAdminUser._id;
+
+      await axios.put(
+        `${ADMIN_API}/users/${targetUserId}/password`,
+        {
+          newPassword: adminPassword,
+        },
+        getAuthHeader()
+      );
+
+      setAdminPassword("");
+      alert("Password updated successfully.");
+    } catch (err) {
+      console.error("Admin change password error:", err);
+      alert(err.response?.data?.message || "Failed to update password.");
+    }
+  };
+
+  const backToAdminUserList = () => {
+    setSelectedAdminUser(null);
+    setAdminCards([]);
+    setAdminUserHistory([]);
+    setSelectedAdminSession(null);
+    setAdminPassword("");
+    setAdminQuestion("");
+    setAdminAnswer("");
+    setAdminOpenSection(null);
+    setAdminCardSearch("");
+  };
+
+  const filteredCards = cards.filter((card) => {
+    const keyword = search.toLowerCase();
+
+    return (
+      card.question.toLowerCase().includes(keyword) ||
+      card.answer.toLowerCase().includes(keyword)
+    );
+  });
+
+  const filteredAdminCards = adminCards.filter((card) => {
+    const keyword = adminCardSearch.toLowerCase();
+
+    return (
+      card.question.toLowerCase().includes(keyword) ||
+      card.answer.toLowerCase().includes(keyword)
+    );
+  });
+
+  const currentLearningCard = learningCards[learningIndex];
+  const currentCorrectCount = learningResults.filter(
+    (item) => item.isCorrect
+  ).length;
 
   return (
     <div className="app">
@@ -301,8 +558,8 @@ function App() {
             <span className="badge">Study smarter</span>
             <h1>Flashcard Learning App</h1>
             <p>
-              Create flashcards, reveal answers, and track your most studied
-              cards in one simple dashboard.
+              Create flashcards, review theory, complete learning sessions, and
+              track wrong answers.
             </p>
           </div>
 
@@ -357,7 +614,7 @@ function App() {
         <div className="dashboard">
           <header className="dashboard-header">
             <div>
-              <span className="badge">Flashcard Dashboard</span>
+              <span className="badge">Theory Library</span>
               <h1>Flashcard Learning App</h1>
               <p>
                 Logged in as <strong>{user.username}</strong>
@@ -366,13 +623,17 @@ function App() {
             </div>
 
             <div className="header-actions">
-              <button className="secondary-btn" onClick={fetchMyHistory}>
+              <button className="primary-btn" onClick={startLearning}>
+                Start Learning
+              </button>
+
+              <button className="secondary-btn" onClick={() => fetchMyHistory()}>
                 My History
               </button>
 
               {user?.role === "admin" && (
-                <button className="secondary-btn" onClick={fetchAllHistory}>
-                  View All History
+                <button className="secondary-btn" onClick={openAdminPanel}>
+                  Admin Panel
                 </button>
               )}
 
@@ -384,7 +645,7 @@ function App() {
 
           <section className="stats-grid">
             <div className="stat-card">
-              <span>Total Cards</span>
+              <span>Total Theory Cards</span>
               <strong>{cards.length}</strong>
             </div>
 
@@ -394,15 +655,15 @@ function App() {
             </div>
 
             <div className="stat-card">
-              <span>History Items</span>
-              <strong>{history.length}</strong>
+              <span>Study Sessions</span>
+              <strong>{sessions.length}</strong>
             </div>
           </section>
 
           <section className="form-card">
             <div>
-              <h2>Create a new flashcard</h2>
-              <p>Add a question and answer for your study set.</p>
+              <h2>Create a new theory card</h2>
+              <p>Add a question and answer to your theory library.</p>
             </div>
 
             <div className="form-row pretty-form-row">
@@ -432,7 +693,7 @@ function App() {
 
           <input
             className="search"
-            placeholder="Search flashcards..."
+            placeholder="Search theory cards..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -440,47 +701,31 @@ function App() {
           <section className="card-grid">
             {filteredCards.length === 0 ? (
               <div className="empty-card">
-                <h3>No flashcards found</h3>
-                <p>This account does not have flashcards yet.</p>
+                <h3>No theory cards found</h3>
+                <p>This account does not have theory cards yet.</p>
               </div>
             ) : (
               filteredCards.map((card) => (
-                <div
-                  className={`card ${
-                    revealedCardId === card._id ? "revealed" : ""
-                  }`}
-                  key={card._id}
-                  onClick={() => handleCardClick(card)}
-                >
+                <div className="card theory-card" key={card._id}>
                   <div className="card-top">
-                    <span>Question</span>
+                    <span>Theory Card</span>
                   </div>
 
                   <h3>{card.question}</h3>
 
-                  {revealedCardId === card._id ? (
-                    <p className="answer">{card.answer}</p>
-                  ) : (
-                    <p className="hint">Click card to reveal answer</p>
-                  )}
+                  <p className="answer theory-answer">{card.answer}</p>
 
                   <div className="card-actions">
                     <button
                       className="edit-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        updateCard(card._id);
-                      }}
+                      onClick={() => updateCard(card._id)}
                     >
                       Edit
                     </button>
 
                     <button
                       className="delete-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteCard(card._id);
-                      }}
+                      onClick={() => deleteCard(card._id)}
                     >
                       Delete
                     </button>
@@ -489,6 +734,101 @@ function App() {
               ))
             )}
           </section>
+
+          {learningMode && (
+            <div className="learning-overlay">
+              <div className="learning-modal">
+                {!learningCompleted ? (
+                  <>
+                    <div className="learning-header">
+                      <div>
+                        <span className="badge">Learning Mode</span>
+                        <h2>
+                          Card {learningIndex + 1} of {learningCards.length}
+                        </h2>
+                      </div>
+
+                      <button className="close-btn" onClick={cancelLearningMode}>
+                        ×
+                      </button>
+                    </div>
+
+                    <div
+                      className={`learning-card ${
+                        learningFlipped ? "flipped" : ""
+                      }`}
+                      onClick={() => setLearningFlipped(true)}
+                    >
+                      {!learningFlipped ? (
+                        <>
+                          <span>Question</span>
+                          <h3>{currentLearningCard?.question}</h3>
+                          <p>Click this card to reveal the answer.</p>
+                        </>
+                      ) : (
+                        <>
+                          <span>Answer</span>
+                          <h3>{currentLearningCard?.question}</h3>
+                          <p>{currentLearningCard?.answer}</p>
+                        </>
+                      )}
+                    </div>
+
+                    {learningFlipped && (
+                      <div className="learning-actions">
+                        <button
+                          className="wrong-btn"
+                          onClick={() => markLearningCard(false)}
+                        >
+                          Wrong
+                        </button>
+
+                        <button
+                          className="correct-btn"
+                          onClick={() => markLearningCard(true)}
+                        >
+                          Correct
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="learning-header">
+                      <div>
+                        <span className="badge">Completed</span>
+                        <h2>Study Session Finished</h2>
+                      </div>
+
+                      <button className="close-btn" onClick={closeLearningMode}>
+                        ×
+                      </button>
+                    </div>
+
+                    <div className="learning-summary">
+                      <h3>
+                        Result:{" "}
+                        {lastSavedSession?.correctCount ?? currentCorrectCount} /{" "}
+                        {lastSavedSession?.totalCards ?? learningResults.length}{" "}
+                        correct
+                      </h3>
+
+                      <p>
+                        Wrong answers:{" "}
+                        {lastSavedSession?.wrongCount ??
+                          learningResults.filter((item) => !item.isCorrect)
+                            .length}
+                      </p>
+
+                      <button className="primary-btn full" onClick={closeLearningMode}>
+                        Save and Close
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           {showHistory && (
             <div
@@ -501,19 +841,12 @@ function App() {
             <div className="history-header">
               <div>
                 <h2>
-                  {historyMode === "all"
-                    ? selectedHistoryUser
-                      ? `${selectedHistoryUser.username}'s History`
-                      : "Select a User"
-                    : "My Learning History"}
+                  {selectedSession ? "Wrong Answers" : "My Learning History"}
                 </h2>
-
                 <p>
-                  {historyMode === "all"
-                    ? selectedHistoryUser
-                      ? "Admin view: selected user's studied flashcards."
-                      : "Choose a user to view their learning history."
-                    : "Cards are sorted by how many times you studied them."}
+                  {selectedSession
+                    ? "Review the questions you marked as wrong."
+                    : "Each item is one completed study session."}
                 </p>
               </div>
 
@@ -526,86 +859,311 @@ function App() {
             </div>
 
             <div className="history-list">
-              {historyMode === "all" && !selectedHistoryUser ? (
-                adminUsers.length === 0 ? (
+              {selectedSession ? (
+                <>
+                  <button
+                    className="back-user-btn"
+                    onClick={() => setSelectedSession(null)}
+                  >
+                    ← Back to sessions
+                  </button>
+
+                  {selectedSession.wrongCards.length === 0 ? (
+                    <div className="empty-history">
+                      <h3>No wrong answers</h3>
+                      <p>You answered all cards correctly in this session.</p>
+                    </div>
+                  ) : (
+                    selectedSession.wrongCards.map((card, index) => (
+                      <div
+                        className="history-item"
+                        key={`${card.flashcardId}-${index}`}
+                      >
+                        <strong>
+                          #{index + 1} {card.question}
+                        </strong>
+                        <p>{card.answer}</p>
+                      </div>
+                    ))
+                  )}
+                </>
+              ) : sessions.length === 0 ? (
+                <div className="empty-history">
+                  <h3>No study sessions yet</h3>
+                  <p>Start Learning and complete a session to save history.</p>
+                </div>
+              ) : (
+                sessions.map((session, index) => (
+                  <button
+                    className="session-card"
+                    key={session._id}
+                    onClick={() => setSelectedSession(session)}
+                  >
+                    <strong>Study Session #{sessions.length - index}</strong>
+                    <p>
+                      Result: {session.correctCount} / {session.totalCards}{" "}
+                      correct
+                      <br />
+                      Wrong: {session.wrongCount}
+                      <br />
+                      Completed:{" "}
+                      {session.completedAt
+                        ? new Date(session.completedAt).toLocaleString()
+                        : "Not available"}
+                    </p>
+                  </button>
+                ))
+              )}
+            </div>
+          </aside>
+
+          {showAdminPanel && (
+            <div
+              className="admin-overlay"
+              onClick={() => setShowAdminPanel(false)}
+            ></div>
+          )}
+
+          <aside className={`admin-drawer ${showAdminPanel ? "open" : ""}`}>
+            <div className="history-header">
+              <div>
+                <h2>Admin Management Panel</h2>
+                <p>
+                  Select a user to manage their flashcards, password, and
+                  learning history.
+                </p>
+              </div>
+
+              <button
+                className="close-btn"
+                onClick={() => setShowAdminPanel(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            {!selectedAdminUser ? (
+              <div className="admin-panel-list">
+                {adminUsers.length === 0 ? (
                   <div className="empty-history">
                     <h3>No users found</h3>
                     <p>No users are available in the system.</p>
                   </div>
                 ) : (
-                  <div className="admin-user-list">
-                    {adminUsers.map((adminUser) => (
-                      <button
-                        className="admin-user-card"
-                        key={adminUser.id || adminUser._id}
-                        onClick={() => fetchHistoryForUser(adminUser)}
-                      >
-                        <div>
-                          <strong>{adminUser.username}</strong>
-                          <span>{adminUser.role}</span>
-                        </div>
-
-                        <p>
-                          {adminUser.totalViews} total views ·{" "}
-                          {adminUser.uniqueCards} cards studied
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                )
-              ) : (
-                <>
-                  {historyMode === "all" && selectedHistoryUser && (
+                  adminUsers.map((adminUser) => (
                     <button
-                      className="back-user-btn"
-                      onClick={() => {
-                        setSelectedHistoryUser(null);
-                        setHistory([]);
-                      }}
+                      className="admin-panel-user-card"
+                      key={adminUser._id || adminUser.id}
+                      onClick={() => fetchAdminUserData(adminUser)}
                     >
-                      ← Back to user list
-                    </button>
-                  )}
-
-                  {history.length === 0 ? (
-                    <div className="empty-history">
-                      <h3>No history yet</h3>
-                      <p>
-                        {historyMode === "all"
-                          ? "This user has not studied any flashcards yet."
-                          : "Click a flashcard to reveal the answer and save history."}
-                      </p>
-                    </div>
-                  ) : (
-                    history.map((item, index) => (
-                      <div
-                        className="history-item"
-                        key={`${
-                          item.userId ||
-                          selectedHistoryUser?.id ||
-                          selectedHistoryUser?._id ||
-                          user?.id ||
-                          "user"
-                        }-${item.flashcardId || item._id || "card"}-${index}`}
-                      >
-                        <strong>
-                          #{index + 1} {item.question}
-                        </strong>
-
-                        <p>
-                          Viewed {item.count || 1} times
-                          <br />
-                          Last viewed:{" "}
-                          {item.viewedAt
-                            ? new Date(item.viewedAt).toLocaleString()
-                            : "Not available"}
-                        </p>
+                      <div>
+                        <strong>{adminUser.username}</strong>
+                        <span>{adminUser.role}</span>
                       </div>
-                    ))
+
+                      <p>
+                        Click to manage this user's flashcards, password, and
+                        history.
+                      </p>
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : (
+              <div className="admin-card-manager">
+                <button className="back-user-btn" onClick={backToAdminUserList}>
+                  ← Back to users
+                </button>
+
+                <div className="selected-user-box">
+                  <h3>{selectedAdminUser.username}</h3>
+                  <p>Role: {selectedAdminUser.role}</p>
+                </div>
+
+                <div className="admin-section">
+                  <h3>Add card for this user</h3>
+
+                  <input
+                    placeholder="Question"
+                    value={adminQuestion}
+                    onChange={(e) => setAdminQuestion(e.target.value)}
+                  />
+
+                  <input
+                    placeholder="Answer"
+                    value={adminAnswer}
+                    onChange={(e) => setAdminAnswer(e.target.value)}
+                  />
+
+                  <button
+                    className="primary-btn full"
+                    onClick={adminAddCardForUser}
+                  >
+                    + Add Card For User
+                  </button>
+                </div>
+
+                <div className="admin-section">
+                  <h3>Change user password</h3>
+
+                  <input
+                    type="password"
+                    placeholder="New password"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                  />
+
+                  <button
+                    className="secondary-btn full"
+                    onClick={adminChangePassword}
+                  >
+                    Change Password
+                  </button>
+                </div>
+
+                <div className="admin-section">
+                  <button
+                    className="admin-toggle-btn"
+                    onClick={() => {
+                      setSelectedAdminSession(null);
+                      setAdminOpenSection(
+                        adminOpenSection === "history" ? null : "history"
+                      );
+                    }}
+                  >
+                    <span>Learning History</span>
+                    <span>{adminOpenSection === "history" ? "−" : "+"}</span>
+                  </button>
+
+                  {adminOpenSection === "history" && (
+                    <>
+                      {selectedAdminSession ? (
+                        <>
+                          <button
+                            className="back-user-btn"
+                            onClick={() => setSelectedAdminSession(null)}
+                          >
+                            ← Back to sessions
+                          </button>
+
+                          {selectedAdminSession.wrongCards.length === 0 ? (
+                            <div className="empty-history">
+                              <h3>No wrong answers</h3>
+                              <p>This user got all cards correct.</p>
+                            </div>
+                          ) : (
+                            selectedAdminSession.wrongCards.map(
+                              (card, index) => (
+                                <div
+                                  className="admin-history-item"
+                                  key={`${card.flashcardId}-${index}`}
+                                >
+                                  <strong>
+                                    #{index + 1} {card.question}
+                                  </strong>
+                                  <p>{card.answer}</p>
+                                </div>
+                              )
+                            )
+                          )}
+                        </>
+                      ) : adminUserHistory.length === 0 ? (
+                        <div className="empty-history">
+                          <h3>No history yet</h3>
+                          <p>
+                            This user has not completed any study sessions yet.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="admin-history-list">
+                          {adminUserHistory.map((session, index) => (
+                            <button
+                              className="session-card"
+                              key={session._id}
+                              onClick={() => setSelectedAdminSession(session)}
+                            >
+                              <strong>
+                                Study Session #{adminUserHistory.length - index}
+                              </strong>
+                              <p>
+                                Result: {session.correctCount} /{" "}
+                                {session.totalCards} correct
+                                <br />
+                                Wrong: {session.wrongCount}
+                                <br />
+                                Completed:{" "}
+                                {session.completedAt
+                                  ? new Date(
+                                      session.completedAt
+                                    ).toLocaleString()
+                                  : "Not available"}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
-                </>
-              )}
-            </div>
+                </div>
+
+                <div className="admin-section">
+                  <button
+                    className="admin-toggle-btn"
+                    onClick={() =>
+                      setAdminOpenSection(
+                        adminOpenSection === "cards" ? null : "cards"
+                      )
+                    }
+                  >
+                    <span>User's Flashcards</span>
+                    <span>{adminOpenSection === "cards" ? "−" : "+"}</span>
+                  </button>
+
+                  {adminOpenSection === "cards" && (
+                    <>
+                      <input
+                        className="admin-search"
+                        placeholder="Search this user's flashcards..."
+                        value={adminCardSearch}
+                        onChange={(e) => setAdminCardSearch(e.target.value)}
+                      />
+
+                      {filteredAdminCards.length === 0 ? (
+                        <div className="empty-history">
+                          <h3>No cards found</h3>
+                          <p>No flashcards match your search.</p>
+                        </div>
+                      ) : (
+                        filteredAdminCards.map((card) => (
+                          <div className="admin-card-item" key={card._id}>
+                            <div>
+                              <strong>{card.question}</strong>
+                              <p>{card.answer}</p>
+                            </div>
+
+                            <div className="admin-card-actions">
+                              <button
+                                className="edit-btn"
+                                onClick={() => adminEditCard(card)}
+                              >
+                                Edit
+                              </button>
+
+                              <button
+                                className="delete-btn"
+                                onClick={() => adminDeleteCard(card._id)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </aside>
         </div>
       )}
