@@ -199,6 +199,7 @@ The real `.env` file is not included in the GitHub repository for security reaso
 The database export files are included in the `database` folder:
 
 - cards.json
+- studysessions.json
 - users.json
 - viewhistories.json
 
