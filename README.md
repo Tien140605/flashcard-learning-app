@@ -14,7 +14,7 @@ The app also includes an admin role. Admin users have a dedicated management pan
 - Create, read, update, and delete theory cards
 - Search theory cards
 - Learning mode with randomised card order
-- Flip-card interaction during learning
+- Click-to-reveal answer interaction during learning
 - Correct / Wrong self-assessment
 - Study session result summary
 - Learning history based on completed study sessions
@@ -63,11 +63,24 @@ Normal users can:
 - Complete learning sessions
 - View their own learning history
 
+## Theory Library
+
+The main dashboard works as a theory library. Users can view all their saved flashcards, including both the question and answer. This allows users to review their theory content before starting a learning session.
+
+Users can also search their theory cards by question or answer.
+
 ## Learning Mode
 
-The dashboard works as a theory library where users can see both the question and answer for each card.
+When users click **Start Learning**, the app starts a learning session. The cards are shown one at a time in random order.
 
-When users click **Start Learning**, the app starts a learning session. The cards are shown one at a time in random order. Users click the card to reveal the answer, then select either **Correct** or **Wrong**. At the end of the session, the app displays the result as:
+For each card:
+
+1. The question is shown first.
+2. The user clicks the card to reveal the answer.
+3. The user marks the card as **Correct** or **Wrong**.
+4. The app moves to the next card.
+
+At the end of the learning session, the app displays the user's result as:
 
 ```txt
 Correct answers / Total cards
@@ -135,7 +148,8 @@ flashcard-app/
 ├── database/
 │   ├── cards.json
 │   ├── users.json
-│   └── viewhistories.json
+│   ├── viewhistories.json
+│   └── studysessions.json
 │
 ├── README.md
 ├── package.json
@@ -199,12 +213,11 @@ The real `.env` file is not included in the GitHub repository for security reaso
 The database export files are included in the `database` folder:
 
 - cards.json
-- studysessions.json
 - users.json
 - viewhistories.json
+- studysessions.json
 
 These files provide sample exported data from the MongoDB database.
-
 
 
 ## Demo Video
@@ -216,12 +229,12 @@ The demo video should focus on the frontend interface in the browser. It demonst
 - Editing and deleting a flashcard
 - Searching flashcards
 - Starting a learning session
-- Flipping cards to reveal answers
+- Clicking a card to reveal the answer
 - Marking answers as correct or wrong
 - Viewing the study session result
 - Opening My History
 - Reviewing wrong answers from a previous session
 - Logging in as admin
-- Using the Admin Panel to manage a selected user's flashcards and history
+- Using the Admin Panel to manage a selected user's flashcards, password, and learning history
 
 The recording should not show the running environment, source code, or database, as these are checked separately through the GitHub repository.
